@@ -7,15 +7,28 @@ const MOVIES = require('./moviedex.json')
 
 const app = express()
 
-app.use(morgan('dev'))
+const morganSettings = process.env.NODE_ENV === 'production' ? 'tiny' : 'common'
+app.use(morgan(morganSettings))
 app.use(helmet())
 app.use(cors())
+
 app.use(function validateBearerToken(req, res, next){
     const authToken = req.get('Authorization')
     const apiToken = process.env.API_TOKEN
     if (!authToken || authToken.split(' ')[1] !== apiToken){
         return res.status(401).json({Error: "Unauthorized request"})
     }
+    next()
+})
+
+app.use((error, req, res, next) => {
+    let response
+    if(process.env.NODE_ENV === 'production'){
+        response = {error: {message: 'server error'}}
+    } else {
+        response = { error }
+    }
+    res.status(500).json(response)
     next()
 })
 
@@ -38,5 +51,5 @@ function handleGetMovies(req, res){
 }
 app.get('/movies', handleGetMovies)
 
-const PORT = 8000
-app.listen(PORT, () => {console.log(`Listening on port ${PORT}`)})
+const PORT = process.env.PORT || 8000
+app.listen(PORT)
